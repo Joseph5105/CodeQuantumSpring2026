@@ -55,6 +55,7 @@
   max-width: 100%;
   margin: 0 auto;
   text-align: center;
+  /*border-inline: 1px solid var(--border); Border Lines on the side of content*/
   min-height: 100svh;
   display: flex;
   flex-direction: column;

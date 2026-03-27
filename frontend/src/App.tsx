@@ -8,7 +8,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [newItem, setNewItem] = useState({ name: '', description: '' })
 
-  const fetchItems = async () => {
+  const fetchItems = async () => { // Test Commit
     setLoading(true)
     try {
       const data = await itemService.getItems()
@@ -93,7 +93,7 @@ function App() {
                   <div key={item.id} className="item-card">
                     <div className="card-header">
                       <h3>{item.name}</h3>
-                      <button 
+                      <button
                         onClick={() => handleDelete(item.id)}
                         className="delete-btn"
                         title="Delete Item"
