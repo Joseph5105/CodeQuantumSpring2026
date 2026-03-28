@@ -1,0 +1,615 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap');
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --gunmetal: #1c1f22;
+    --gunmetal-light: #23272b;
+    --gunmetal-mid: #1a1d20;
+    --gunmetal-dark: #141618;
+    --red: #dc2626;
+    --red-dim: rgba(220, 38, 38, 0.15);
+    --red-glow: rgba(220, 38, 38, 0.35);
+    --mono: 'Share Tech Mono', monospace;
+    --display: 'Rajdhani', sans-serif;
+}
+
+.studio-root {
+    height: 100vh;
+    width: 100vw;
+    background: var(--gunmetal);
+    color: #d4d8dc;
+    font-family: var(--display);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Subtle scanline */
+.studio-root::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg,
+            transparent,
+            transparent 3px,
+            rgba(0, 0, 0, 0.04) 3px,
+            rgba(0, 0, 0, 0.04) 4px);
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* ── LAYOUT ── */
+.studio-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* ── CAR SHOWCASE ── */
+.car-showcase {
+    position: relative;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background:
+        radial-gradient(ellipse 70% 50% at 50% 55%, rgba(150, 8, 8, 0.06) 0%, transparent 70%),
+        var(--gunmetal);
+}
+
+.car-showcase::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image:
+        linear-gradient(rgba(220, 38, 38, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(220, 38, 38, 0.03) 1px, transparent 1px);
+    background-size: 55px 55px;
+    pointer-events: none;
+}
+
+/* Car wrapper — handles bounce animation */
+.car-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 70%;
+    transition: transform 0.3s ease;
+}
+
+.car-wrapper.bouncing {
+    animation: carBounce var(--bounce-duration, 0.6s) ease-in-out infinite;
+}
+
+@keyframes carBounce {
+
+    0%,
+    100% {
+        transform: translateY(0px);
+    }
+
+    50% {
+        transform: translateY(var(--bounce-height, -6px));
+    }
+}
+
+/* Wind streams — activated on aero hover */
+.wind-streams {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+
+.wind-streams.active {
+    opacity: 1;
+}
+
+.wind-stream {
+    position: absolute;
+    height: 1px;
+    width: 120%;
+    left: -10%;
+    background: linear-gradient(90deg, transparent 0%, rgba(100, 180, 255, 0.5) 40%, rgba(150, 210, 255, 0.8) 60%, transparent 100%);
+    animation: windStream linear infinite;
+    border-radius: 2px;
+}
+
+@keyframes windStream {
+    0% {
+        transform: translateX(-30%) scaleX(0.3);
+        opacity: 0;
+    }
+
+    20% {
+        opacity: 1;
+    }
+
+    80% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(30%) scaleX(1.2);
+        opacity: 0;
+    }
+}
+
+/* Exhaust fire — activated on engine hover */
+.exhaust-fire {
+    position: absolute;
+    right: 12%;
+    bottom: 36%;
+    display: flex;
+    gap: 3px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.exhaust-fire.active {
+    opacity: 1;
+}
+
+.flame {
+    width: 6px;
+    border-radius: 50% 50% 30% 30%;
+    transform-origin: bottom center;
+    animation: flicker ease-in-out infinite;
+}
+
+.flame:nth-child(1) {
+    height: 18px;
+    background: linear-gradient(to top, #ff4500, #ff8c00, #ffdc00);
+    animation-duration: 0.18s;
+    animation-delay: 0s;
+}
+
+.flame:nth-child(2) {
+    height: 24px;
+    background: linear-gradient(to top, #ff2200, #ff6600, #ffaa00);
+    animation-duration: 0.22s;
+    animation-delay: 0.04s;
+}
+
+.flame:nth-child(3) {
+    height: 14px;
+    background: linear-gradient(to top, #ff5500, #ff9900, #ffee00);
+    animation-duration: 0.15s;
+    animation-delay: 0.09s;
+}
+
+.flame:nth-child(4) {
+    height: 20px;
+    background: linear-gradient(to top, #ff3300, #ff7700, #ffcc00);
+    animation-duration: 0.2s;
+    animation-delay: 0.03s;
+}
+
+@keyframes flicker {
+
+    0%,
+    100% {
+        transform: scaleX(1) scaleY(1) rotate(-2deg);
+    }
+
+    33% {
+        transform: scaleX(1.2) scaleY(0.85) rotate(3deg);
+    }
+
+    66% {
+        transform: scaleX(0.85) scaleY(1.15) rotate(-4deg);
+    }
+}
+
+/* Wheel spin — activated on transmission hover */
+.car-svg-wrap {
+    width: 100%;
+    position: relative;
+}
+
+.car-svg-wrap.spin-wheels .wheel-circle {
+    animation: wheelSpin var(--spin-speed, 0.8s) linear infinite;
+    transform-origin: center;
+}
+
+/* We target wheel groups via CSS — CarSVG must add class="wheel-front" / "wheel-rear" */
+@keyframes wheelSpin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Car label */
+.car-label {
+    position: absolute;
+    top: 1rem;
+    left: 1.5rem;
+    font-family: var(--mono);
+    font-size: 13px;
+    color: rgba(220, 38, 38, 0.95);
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.car-label::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    background: var(--red);
+    border-radius: 50%;
+    animation: blink 1.4s ease-in-out infinite;
+}
+
+.car-glow {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 55%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+    box-shadow: 0 0 30px 8px var(--red-glow);
+}
+
+.car-stats-overlay {
+    position: absolute;
+    bottom: 1rem;
+    left: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.car-stat {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.65);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+}
+
+.car-stat span {
+    color: var(--red);
+}
+
+/* ── CONTROL PANEL ── */
+.control-panel {
+    display: flex;
+    flex-direction: column;
+    background: var(--gunmetal-dark);
+    border-top: 1px solid rgba(220, 38, 38, 0.1);
+    flex-shrink: 0;
+}
+
+/* Telemetry strip */
+.telem-strip {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.telem-cell {
+    padding: 0.4rem 1.2rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: background 0.2s ease;
+}
+
+.telem-cell:last-child {
+    border-right: none;
+}
+
+.telem-cell:hover {
+    background: rgba(220, 38, 38, 0.04);
+}
+
+.telem-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.22);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+.telem-value {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: #c8cdd2;
+    font-weight: 700;
+}
+
+.telem-value.red {
+    color: var(--red);
+}
+
+/* Controls row */
+.controls-row {
+    display: grid;
+    grid-template-columns: 1fr 180px;
+    gap: 0;
+    padding: 0.6rem 1.5rem;
+    align-items: start;
+}
+
+.budget-block {
+    padding-right: 1.5rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sliders-block {
+    padding: 0 1.5rem 0 0;
+    border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.run-block {
+    padding-left: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Panel label */
+.panel-section-label {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: rgba(220, 38, 38, 0.9);
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.panel-section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(220, 38, 38, 0.12);
+}
+
+/* Budget */
+.budget-display {
+    background: rgba(220, 38, 38, 0.03);
+    border: 1px solid rgba(220, 38, 38, 0.1);
+    padding: 0.75rem 1rem;
+}
+
+.budget-label {
+    font-family: var(--mono);
+    font-size: 8px;
+    color: rgba(255, 255, 255, 0.22);
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+}
+
+.budget-amount {
+    font-family: var(--mono);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #e0e4e8;
+    line-height: 1;
+}
+
+.budget-amount.warning {
+    color: var(--red);
+}
+
+.budget-bar-track {
+    margin-top: 8px;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.05);
+    position: relative;
+}
+
+.budget-bar-fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #991b1b, var(--red));
+    transition: width 0.4s ease;
+    box-shadow: 0 0 6px var(--red-glow);
+}
+
+/* Sliders */
+.slider-item {
+    flex: 1;
+    padding: 0 1rem;
+    border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.slider-item:first-child {
+    padding-left: 0;
+}
+
+.slider-item:last-child {
+    border-right: none;
+}
+
+.slider-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 4px;
+}
+
+.slider-name {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(210, 215, 220, 0.85);
+    transition: color 0.2s ease;
+}
+
+.slider-item:hover .slider-name {
+    color: #ffffff;
+}
+
+.slider-value {
+    font-family: var(--mono);
+    font-size: 18px;
+    color: var(--red);
+    font-weight: 700;
+}
+
+.slider-desc {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.45);
+    letter-spacing: 0.1em;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.slider-track {
+    position: relative;
+    height: 20px;
+    display: flex;
+    align-items: center;
+}
+
+.slider-track-bg {
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.slider-track-fill {
+    position: absolute;
+    left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #7f1d1d, var(--red));
+    transition: width 0.15s ease;
+    box-shadow: 0 0 5px var(--red-glow);
+}
+
+.hud-slider {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    -webkit-appearance: none;
+    appearance: none;
+    cursor: ew-resize;
+    z-index: 10;
+}
+
+.hud-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 3px;
+    height: 16px;
+    background: #e0e4e8;
+    border-radius: 0;
+    cursor: ew-resize;
+    box-shadow: 0 0 8px rgba(220, 228, 232, 0.5);
+    transition: height 0.15s ease;
+}
+
+.hud-slider::-webkit-slider-thumb:hover {
+    height: 20px;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.8), 0 0 20px var(--red-glow);
+}
+
+/* Run button */
+.run-btn {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    background: var(--red);
+    border: none;
+    color: #fff;
+    font-family: var(--display);
+    font-size: 0.9rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.2s ease;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+}
+
+.run-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+    transition: left 0.4s ease;
+}
+
+.run-btn:hover {
+    background: #b91c1c;
+}
+
+.run-btn:hover::before {
+    left: 100%;
+}
+
+.run-btn:active {
+    transform: scale(0.98);
+}
+
+.run-btn-sub {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.28);
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-align: center;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.2;
+    }
+}
+
+@keyframes windMove {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
+}
