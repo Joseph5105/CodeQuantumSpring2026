@@ -15,15 +15,15 @@ export const itemService = {
     return response.data;
   },
 
-  // Create a new item
-  createItem: async (item: ItemCreate): Promise<Item> => {
-    const response = await api.post<Item>('/items/', item);
+  getSimulationHistory: async (limit = 25): Promise<SimulationHistoryItem[]> => {
+    const response = await api.get<SimulationHistoryItem[]>('/simulations', {
+      params: { limit },
+    });
     return response.data;
   },
 
-  // Delete an item
-  deleteItem: async (id: number): Promise<{ message: string }> => {
-    const response = await api.delete<{ message: string }>(`/items/${id}`);
+  getSimulationById: async (id: number): Promise<Record<string, unknown>> => {
+    const response = await api.get<Record<string, unknown>>(`/simulations/${id}`);
     return response.data;
   },
 };
