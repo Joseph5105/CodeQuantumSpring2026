@@ -24,7 +24,7 @@ app = FastAPI(title="CodeQuantum F1 Simulation API")
 # For tighter security, replace ["*"] with ["https://codequantumspring2026-production.up.railway.app"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://codequantumspring2026-production.up.railway.app"],
+    allow_origins=["codequantumspring2026-production-479b.up.railway.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
