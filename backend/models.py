@@ -1,4 +1,4 @@
-from sqlalchemy import Column, DateTime, Float, Integer, String, func
+from sqlalchemy import Boolean, Column, DateTime, Float, Integer, String, func
 from database import Base
 
 
@@ -25,6 +25,10 @@ class SimulationRun(Base):
     suspension_slider = Column(Integer, nullable=False)
     transmission_slider = Column(Integer, nullable=False)
     pitcrew_slider = Column(Integer, nullable=False)
+    selected_driver_number = Column(String, nullable=True, index=True)
+    teammate_spillover_enabled = Column(Boolean, nullable=False, default=True)
+    spillover_intensity = Column(Float, nullable=False, default=0.10)
+    tradeoff_strength = Column(Float, nullable=False, default=1.0)
 
     baseline_finish_time_s = Column(Float, nullable=False)
     predicted_finish_time_s = Column(Float, nullable=False)
@@ -34,3 +38,22 @@ class SimulationRun(Base):
 
     modifiers_json = Column(String, nullable=False)
     contributions_json = Column(String, nullable=False)
+
+
+class DriverRecord(Base):
+    __tablename__ = "driver_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    driver_number = Column(String, nullable=False, unique=True, index=True)
+    driver_name = Column(String, nullable=False)
+    team_name = Column(String, nullable=False, index=True)
+
+
+class RoundRecord(Base):
+    __tablename__ = "round_records"
+
+    id = Column(Integer, primary_key=True, index=True)
+    round = Column(Integer, nullable=False, unique=True, index=True)
+    event_name = Column(String, nullable=False)
+    country = Column(String, nullable=False)
+    location = Column(String, nullable=False)

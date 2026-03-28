@@ -106,7 +106,7 @@ rr = rr.merge(lap_sum, on = ['Round', 'DriverNumber'], how = 'left')
 
 rr["ElapsedTime_td"] = pd.NaT
 # The winner's time is already present.
-win_mask = rr['Position'] == 1 & rr['winnertime_td'].notna()
+win_mask = (rr['Position'] == 1) & (rr['winnertime_td'].notna())
 rr.loc[win_mask, 'ElapsedTime_td'] = rr.loc[win_mask, 'winnertime_td']
 
 # The times for the finishers.
@@ -146,9 +146,13 @@ for i, col in enumerate(qcols):
 lt = lt.drop(columns = 'LapTime_td')
 
 # Save the tables.
+qual.to_csv('QualTimes.csv', index = False)
+race.to_csv('RaceTimes.csv', index = False)
 rr.to_csv('RaceResults.csv', index = False)
 lt.to_csv('LapTimes.csv', index = False)
 
 # Also save a parquet copy.
+qual.to_parquet('QualTimes.parquet', index = False)
+race.to_parquet('RaceTimes.parquet', index = False)
 rr.to_parquet('RaceResults.parquet', index = False)
-rr.to_parquet('LapTimes.parquet', index = False)
+lt.to_parquet('LapTimes.parquet', index = False)
