@@ -9,6 +9,8 @@ This is a full-stack template designed for quick iteration during hackathons. It
 cd backend
 python -m venv venv
 
+.
+
 # Activation (Choose based on your terminal):
 source venv/Scripts/activate      # Git Bash (MINGW64)
 venv\Scripts\activate            # Command Prompt

@@ -19,6 +19,8 @@ The backend is built with **FastAPI** and uses **SQLAlchemy** as an ORM (Object-
 
 If you decide to expand this project with many more pages and complex logic, I recommend migrating to the following structure to keep your code organized and maintainable.
 
+.
+
 ### 🐍 Backend (Modular)
 ```text
 backend/
