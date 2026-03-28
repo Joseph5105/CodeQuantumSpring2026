@@ -2,9 +2,10 @@ import axios from 'axios';
 import type { Item, ItemCreate } from '../types/item';
 
 // Create an axios instance with a base URL
-// Our Vite proxy handles the '/api' prefix, so we use it here
+// Our Vite proxy handles the '/api' prefix locally. 
+// In production (Railway), we inject the real backend URL via VITE_API_URL.
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
 export interface Sliders {

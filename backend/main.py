@@ -2,6 +2,7 @@ import json
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 
 import database
@@ -18,6 +19,17 @@ from schemas import (
 )
 
 app = FastAPI(title="CodeQuantum F1 Simulation API")
+
+# Allow the frontend to access the API when deployed on a different domain.
+# For tighter security, replace ["*"] with ["https://codequantumspring2026-production.up.railway.app"]
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://codequantumspring2026-production.up.railway.app"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 ENGINE = SimulationEngine()
 
 
