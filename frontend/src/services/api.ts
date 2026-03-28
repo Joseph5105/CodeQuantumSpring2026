@@ -6,50 +6,102 @@ const api = axios.create({
   baseURL: '/api',
 });
 
+export interface Sliders {
+  engine: number;
+  aero: number;
+  suspension: number;
+  transmission: number;
+  pitcrew: number;
+}
 
-/*Why Item and ItemCreate?
-This is a standard pattern in API design called DTOs (Data Transfer Objects).
+export interface SimulationRequest {
+  sliders: Sliders;
+}
 
-ItemCreate
-: This represents what you send to the server. 
-When you create an item, you don't know its id yet—the database generates that 
-automatically. So, ItemCreate only asks for the name and description.
+export interface NextTrackProbability {
+  round: number;
+  event_name: string;
+  country: string;
+  location: string;
+  probability: number;
+}
 
-Item
-: This represents what you receive from the server. Once an item is in the database, 
-it has a unique id. This interface includes that id so the frontend knows how to identify it 
-(e.g., for editing or deleting). The Benefit: It prevents the frontend from trying to "force" an 
-ID on the database, and it keeps your data clean by separating "Input" from "Output."
+export interface DriverMeta {
+  driver_number: string;
+  driver_name: string;
+  team_name: string;
+}
 
-*/
-export interface Item {
+export interface RoundMeta {
+  round: number;
+  event_name: string;
+  country: string;
+  location: string;
+}
+
+export interface DriverSimulationResult {
+  driver_number: string;
+  driver_name: string;
+  team_name: string;
+  expected_baseline_finish_time_s: number;
+  expected_predicted_finish_time_s: number;
+  expected_delta_s: number;
+  expected_rank_estimate: number;
+  expected_pit_error_risk: number;
+  confidence: number;
+}
+
+export interface SimulationResponse {
+  simulation_id: number;
+  model_version: string;
+  next_track_probabilities: NextTrackProbability[];
+  top_results: DriverSimulationResult[];
+  modifiers: Record<string, number>;
+}
+
+export interface SimulationHistoryItem {
   id: number;
-  name: string;
-  description: string;
+  created_at: string;
+  model_version: string;
+  round: number;
+  driver_number: string;
+  baseline_finish_time_s: number;
+  predicted_finish_time_s: number;
+  delta_s: number;
+  rank_estimate: number;
+  pit_error_risk: number;
 }
 
-export interface ItemCreate {
-  name: string;
-  description: string;
-}
-
-// API functions
-export const itemService = {
-  // Fetch all items
-  getItems: async (): Promise<Item[]> => {
-    const response = await api.get<Item[]>('/items/');
+export const simulationService = {
+  getDrivers: async (): Promise<DriverMeta[]> => {
+    const response = await api.get<DriverMeta[]>('/meta/drivers');
     return response.data;
   },
 
-  // Create a new item
-  createItem: async (item: ItemCreate): Promise<Item> => {
-    const response = await api.post<Item>('/items/', item);
+  getRounds: async (): Promise<RoundMeta[]> => {
+    const response = await api.get<RoundMeta[]>('/meta/rounds');
     return response.data;
   },
 
-  // Delete an item
-  deleteItem: async (id: number): Promise<{ message: string }> => {
-    const response = await api.delete<{ message: string }>(`/items/${id}`);
+  getNextTrackProbabilities: async (): Promise<NextTrackProbability[]> => {
+    const response = await api.get<NextTrackProbability[]>('/meta/next-track-probabilities');
+    return response.data;
+  },
+
+  simulate: async (payload: SimulationRequest): Promise<SimulationResponse> => {
+    const response = await api.post<SimulationResponse>('/simulate', payload);
+    return response.data;
+  },
+
+  getSimulationHistory: async (limit = 25): Promise<SimulationHistoryItem[]> => {
+    const response = await api.get<SimulationHistoryItem[]>('/simulations', {
+      params: { limit },
+    });
+    return response.data;
+  },
+
+  getSimulationById: async (id: number): Promise<Record<string, unknown>> => {
+    const response = await api.get<Record<string, unknown>>(`/simulations/${id}`);
     return response.data;
   },
 };
