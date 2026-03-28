@@ -627,7 +627,16 @@ class SimulationEngine:
             raise RuntimeError("No driver simulation results available")
 
         driver_results.sort(key=lambda d: d.expected_predicted_finish_time_s)
+        
+        # Ensure the selected driver is ALWAYS in the top_results payload
+        # so the frontend can successfully render the race playback for them.
         top_results = driver_results[:10]
+        if payload.selected_driver_number:
+            is_selected_in_top = any(d.driver_number == payload.selected_driver_number for d in top_results)
+            if not is_selected_in_top:
+                selected_driver_data = next((d for d in driver_results if d.driver_number == payload.selected_driver_number), None)
+                if selected_driver_data:
+                    top_results.append(selected_driver_data)
 
         return SimulationComputation(
             model_version=MODEL_VERSION,

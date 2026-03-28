@@ -2,10 +2,11 @@ import { useState, useEffect, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ComponentSliders from '../components/ComponentSliders';
 import Navbar from '../components/Navbar';
-import { mockQualities, getMockRemainingBudget, mockComponents } from '../store/mockComponentData';
+import { mockQualities } from '../store/mockComponentData';
 import {
   simulationService,
   type DriverMeta,
+  type BudgetConfig,
   type BudgetExceededDetail,
 } from '../services/api';
 import '../styles/design-studio.css';
@@ -85,6 +86,7 @@ const StudioPage = () => {
 
   // API Driven States
   const [drivers, setDrivers] = useState<DriverMeta[]>([]);
+  const [budgetConfig, setBudgetConfig] = useState<BudgetConfig | null>(null);
   const [selectedDriverNumber, setSelectedDriverNumber] = useState<string>('');
   const [isRunning, setIsRunning] = useState(false);
   const [driverLoadError, setDriverLoadError] = useState<string | null>(null);
@@ -92,10 +94,12 @@ const StudioPage = () => {
   const [budgetError, setBudgetError] = useState<BudgetExceededDetail | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const remainingBudget = getMockRemainingBudget(qualities);
-
-  // Load drivers on mount
+  // Sync budget config on mount
   useEffect(() => {
+    simulationService.getBudgetConfig()
+      .then(setBudgetConfig)
+      .catch(e => console.warn("Using local budget fallback:", e));
+
     simulationService.getDrivers()
       .then(setDrivers)
       .catch(e => {
@@ -103,6 +107,27 @@ const StudioPage = () => {
         setDriverLoadError("Regional Driver Database Offline · Using Local Grid");
       });
   }, []);
+
+  const calculateTotalSpent = (currentQualities: Record<string, number>) => {
+    const gamma = budgetConfig?.package_cost_gamma ?? 1.5;
+    const maxCosts = budgetConfig?.package_max_costs ?? {
+      engine: 15_000_000,
+      aero: 9_000_000,
+      suspension: 6_000_000,
+      transmission: 7_000_000,
+      pitcrew: 3_500_000,
+    };
+
+    return Object.entries(currentQualities).reduce((acc, [key, value]) => {
+      const apiKey = key === 'aerodynamics' ? 'aero' : key === 'pitCrew' ? 'pitcrew' : key;
+      const maxCost = maxCosts[apiKey];
+      if (!maxCost) return acc;
+      const ratio = value / 100;
+      return acc + (maxCost * Math.pow(ratio, gamma));
+    }, 0);
+  };
+
+  const remainingBudget = (budgetConfig?.budget_cap ?? 30_000_000) - calculateTotalSpent(qualities);
 
   const handleSliderChange = (key: string, value: string) => {
     const val = parseInt(value);
@@ -113,14 +138,29 @@ const StudioPage = () => {
       return;
     }
 
-    const costIncrease = (val - oldValue) * mockComponents[key].costPerPoint;
+    const gamma = budgetConfig?.package_cost_gamma ?? 1.5;
+    const maxCosts = budgetConfig?.package_max_costs ?? {
+      engine: 15_000_000,
+      aero: 9_000_000,
+      suspension: 6_000_000,
+      transmission: 7_000_000,
+      pitcrew: 3_500_000,
+    };
 
-    if (costIncrease <= remainingBudget) {
-      setQualities(prev => ({ ...prev, [key]: val }));
-    } else {
-      const extra = Math.floor(remainingBudget / mockComponents[key].costPerPoint);
-      setQualities(prev => ({ ...prev, [key]: oldValue + extra }));
-    }
+    const apiKey = key === 'aerodynamics' ? 'aero' : key === 'pitCrew' ? 'pitcrew' : key;
+    const maxCost = maxCosts[apiKey] ?? 0;
+
+    // Calculate quality without the specific component being changed
+    const otherQualities = { ...qualities };
+    delete otherQualities[key];
+    const spentOnOthers = calculateTotalSpent(otherQualities);
+    const budgetForComponent = (budgetConfig?.budget_cap ?? 30_000_000) - spentOnOthers;
+
+    // Formula: points = 100 * (Cost / MaxCost) ^ (1/gamma)
+    const maxPointsAllowed = Math.floor(100 * Math.pow(Math.max(0, budgetForComponent) / maxCost, 1 / gamma));
+    const finalVal = Math.min(val, maxPointsAllowed);
+
+    setQualities(prev => ({ ...prev, [key]: finalVal }));
   };
 
   const handleRunSimulation = async () => {

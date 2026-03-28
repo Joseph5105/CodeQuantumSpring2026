@@ -401,6 +401,15 @@ const RaceSimulationPage = () => {
                 <strong>{(selectedDriver.confidence * 100).toFixed(1)}%</strong>
               </div>
             </div>
+            
+            <button 
+              className="race-control-btn" 
+              style={{ marginTop: '1.5rem', width: '100%', padding: '12px', background: 'rgba(220, 38, 38, 0.15)', borderColor: 'rgba(220, 38, 38, 0.4)' }}
+              onClick={() => navigate('/results', { state: { simulationResult, selectedDriverNumber } })}
+            >
+              View Detailed Report
+            </button>
+
           </aside>
         </section>
       </main>

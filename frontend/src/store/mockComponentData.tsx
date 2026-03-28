@@ -8,40 +8,52 @@ export const mockQualities: Record<string, number> = {
 
 export const mockComponents: Record<string, {
     label: string;
-    costPerPoint: number;
     description: string;
+    maxCost: number;
 }> = {
     engine: {
         label: 'Power Unit',
-        costPerPoint: 120000,
         description: 'V6 Turbo Hybrid',
+        maxCost: 15_000_000,
     },
     aerodynamics: {
         label: 'Aerodynamics',
-        costPerPoint: 95000,
         description: 'Ground Effect',
+        maxCost: 9_000_000,
     },
     suspension: {
         label: 'Suspension',
-        costPerPoint: 45000,
         description: 'Active Damping',
+        maxCost: 6_000_000,
     },
     transmission: {
         label: 'Transmission',
-        costPerPoint: 60000,
         description: '8-Speed Seamless',
+        maxCost: 7_000_000,
     },
     pitCrew: {
         label: 'Pit Crew',
-        costPerPoint: 30000,
         description: 'Reaction Drills',
+        maxCost: 3_500_000,
     },
 };
 
-export const MOCK_INITIAL_BUDGET = 30000000;
+export const MOCK_INITIAL_BUDGET = 30_000_000;
+export const DEFAULT_GAMMA = 1.5;
+
+/**
+ * Formula: Cost = MaxCost * (points / 100) ^ gamma
+ */
+export const calculateComponentCost = (points: number, maxCost: number, gamma: number = DEFAULT_GAMMA): number => {
+    const ratio = Math.min(100, Math.max(0, points)) / 100;
+    return Math.round(maxCost * Math.pow(ratio, gamma));
+};
 
 export const getMockRemainingBudget = (qualities: Record<string, number>): number => {
-    return MOCK_INITIAL_BUDGET - Object.entries(qualities).reduce((acc, [key, value]) => {
-        return acc + (value * mockComponents[key].costPerPoint);
+    const totalSpent = Object.entries(qualities).reduce((acc, [key, value]) => {
+        const comp = mockComponents[key];
+        if (!comp) return acc;
+        return acc + calculateComponentCost(value, comp.maxCost);
     }, 0);
+    return MOCK_INITIAL_BUDGET - totalSpent;
 };
