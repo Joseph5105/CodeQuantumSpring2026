@@ -1,8 +1,16 @@
 import { useState, type CSSProperties } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ComponentSliders from '../components/ComponentSliders';
-import NavBar from '../components/NavBar';
+import Navbar from '../components/Navbar';
 import { mockQualities, getMockRemainingBudget, mockComponents } from '../store/mockComponentData';
+import {
+  type BudgetConfig,
+  type BudgetExceededDetail,
+  type DriverMeta,
+  type SimulationResponse,
+  simulationService,
+} from '../services/api';
 import '../styles/design-studio.css';
 
 // ── Inline CarSVG with animatable refs ──
@@ -73,7 +81,83 @@ const StudioPage = () => {
   const navigate = useNavigate();
   const [qualities, setQualities] = useState(mockQualities);
   const [hoverEffect, setHoverEffect] = useState<HoverEffect>('none');
-  const remainingBudget = getMockRemainingBudget(qualities);
+  const [budgetConfig, setBudgetConfig] = useState<BudgetConfig | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [drivers, setDrivers] = useState<DriverMeta[]>([]);
+  const [selectedDriverNumber, setSelectedDriverNumber] = useState('');
+  const [driverLoadError, setDriverLoadError] = useState<string | null>(null);
+  const [driverSelectionError, setDriverSelectionError] = useState<string | null>(null);
+  const [budgetError, setBudgetError] = useState<BudgetExceededDetail | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const sliderToBackendKey: Record<string, string> = {
+    engine: 'engine',
+    aerodynamics: 'aero',
+    suspension: 'suspension',
+    transmission: 'transmission',
+    pitCrew: 'pitcrew',
+  };
+
+  const payloadSliders = {
+    engine: qualities.engine,
+    aero: qualities.aerodynamics,
+    suspension: qualities.suspension,
+    transmission: qualities.transmission,
+    pitcrew: qualities.pitCrew,
+  };
+
+  const livePackageCosts = (() => {
+    if (!budgetConfig) {
+      return Object.fromEntries(
+        Object.entries(qualities).map(([key, value]) => [key, value * (mockComponents[key]?.costPerPoint ?? 0)])
+      );
+    }
+    return Object.fromEntries(
+      Object.entries(qualities).map(([key, value]) => {
+        const backendKey = sliderToBackendKey[key];
+        const maxCost = budgetConfig.package_max_costs[backendKey] ?? 0;
+        const ratio = Math.max(0, Math.min(1, value / 100));
+        return [key, maxCost * ratio ** budgetConfig.package_cost_gamma];
+      })
+    );
+  })();
+
+  const liveTotalCost = Object.values(livePackageCosts).reduce((sum, value) => sum + value, 0);
+  const remainingBudget = budgetConfig
+    ? budgetConfig.budget_cap - liveTotalCost
+    : getMockRemainingBudget(qualities);
+
+  useEffect(() => {
+    const loadBudgetConfig = async () => {
+      try {
+        const config = await simulationService.getBudgetConfig();
+        setBudgetConfig(config);
+      } catch {
+        setBudgetConfig(null);
+      }
+    };
+    void loadBudgetConfig();
+  }, []);
+
+  useEffect(() => {
+    const loadDrivers = async () => {
+      setDriverLoadError(null);
+      try {
+        const fetchedDrivers = await simulationService.getDrivers();
+        const sorted = [...fetchedDrivers].sort((a, b) => {
+          const byTeam = a.team_name.localeCompare(b.team_name);
+          if (byTeam !== 0) {
+            return byTeam;
+          }
+          return a.driver_name.localeCompare(b.driver_name);
+        });
+        setDrivers(sorted);
+      } catch {
+        setDriverLoadError('Unable to load driver list. Please check backend connection.');
+      }
+    };
+    void loadDrivers();
+  }, []);
 
   const handleSliderChange = (key: string, value: string) => {
     const val = parseInt(value);
@@ -95,7 +179,43 @@ const StudioPage = () => {
   };
 
   const handleRunSimulation = () => {
-    console.log('Simulation started:', qualities);
+    if (!selectedDriverNumber) {
+      setDriverSelectionError('Choose your driver before running simulation.');
+      return;
+    }
+
+    const run = async () => {
+      setIsRunning(true);
+      setDriverSelectionError(null);
+      setBudgetError(null);
+      setErrorMessage(null);
+      try {
+        const response: SimulationResponse = await simulationService.simulate({
+          sliders: payloadSliders,
+          selected_driver_number: selectedDriverNumber,
+        });
+        navigate('/race-simulation', {
+          state: {
+            simulationResult: response,
+            selectedDriverNumber,
+          },
+        });
+      } catch (error) {
+        const detail = (error as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail;
+        if (
+          typeof detail === 'object' &&
+          detail !== null &&
+          (detail as { error?: string }).error === 'BUDGET_EXCEEDED'
+        ) {
+          setBudgetError(detail as BudgetExceededDetail);
+        } else {
+          setErrorMessage('Simulation failed. Check backend logs for details.');
+        }
+      } finally {
+        setIsRunning(false);
+      }
+    };
+    void run();
   };
 
   // Suspension bounce — height and speed scale with quality
@@ -119,7 +239,7 @@ const StudioPage = () => {
 
   return (
     <div className="studio-root">
-      <NavBar remainingBudget={remainingBudget} onLogoClick={() => navigate('/')} />
+      <Navbar remainingBudget={remainingBudget} onLogoClick={() => navigate('/')} />
 
       <div className="studio-body">
         {/* ── CAR SHOWCASE ── */}
@@ -210,13 +330,66 @@ const StudioPage = () => {
             {/* Run */}
             <div className="run-block">
               <div className="panel-section-label">Simulate</div>
-              <button className="run-btn" onClick={handleRunSimulation}>
+
+              <div className="driver-select-block">
+                <label className="driver-select-label" htmlFor="selected-driver">
+                  Driver Focus
+                </label>
+                <select
+                  id="selected-driver"
+                  className="driver-select"
+                  value={selectedDriverNumber}
+                  onChange={(event) => {
+                    setSelectedDriverNumber(event.target.value);
+                    if (event.target.value) {
+                      setDriverSelectionError(null);
+                    }
+                  }}
+                >
+                  <option value="">Select a driver</option>
+                  {drivers.map((driver) => (
+                    <option key={driver.driver_number} value={driver.driver_number}>
+                      {driver.driver_name} · {driver.team_name} · #{driver.driver_number}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                className="run-btn"
+                onClick={handleRunSimulation}
+                disabled={isRunning || !selectedDriverNumber || drivers.length === 0}
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M8 5v14l11-7z" />
                 </svg>
-                Run Simulation
+                {isRunning ? 'Running Simulation...' : 'Run Simulation'}
               </button>
               <div className="run-btn-sub">SIM_ENGINE · READY · v4.1.0</div>
+
+              {driverLoadError && (
+                <div style={{ marginTop: '0.8rem', color: '#fca5a5', fontSize: '0.85rem' }}>
+                  {driverLoadError}
+                </div>
+              )}
+
+              {driverSelectionError && (
+                <div style={{ marginTop: '0.8rem', color: '#fca5a5', fontSize: '0.85rem' }}>
+                  {driverSelectionError}
+                </div>
+              )}
+
+              {budgetError && (
+                <div style={{ marginTop: '0.8rem', color: '#fca5a5', fontSize: '0.85rem' }}>
+                  Budget exceeded by ${Math.round(budgetError.over_budget_by).toLocaleString()}
+                </div>
+              )}
+
+              {errorMessage && (
+                <div style={{ marginTop: '0.8rem', color: '#fca5a5', fontSize: '0.85rem' }}>
+                  {errorMessage}
+                </div>
+              )}
             </div>
           </div>
         </div>

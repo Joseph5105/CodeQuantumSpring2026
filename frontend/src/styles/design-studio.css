@@ -370,6 +370,39 @@
     gap: 8px;
 }
 
+.driver-select-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 0.35rem;
+}
+
+.driver-select-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.driver-select {
+    width: 100%;
+    height: 38px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    color: #d4d8dc;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    padding: 0 0.65rem;
+    outline: none;
+}
+
+.driver-select:focus {
+    border-color: rgba(220, 38, 38, 0.8);
+    box-shadow: 0 0 0 1px rgba(220, 38, 38, 0.3);
+}
+
 /* Panel label */
 .panel-section-label {
     font-family: var(--mono);
@@ -580,6 +613,16 @@
 
 .run-btn:active {
     transform: scale(0.98);
+}
+
+.run-btn:disabled {
+    background: #5b2020;
+    color: rgba(255, 255, 255, 0.65);
+    cursor: not-allowed;
+}
+
+.run-btn:disabled::before {
+    display: none;
 }
 
 .run-btn-sub {
