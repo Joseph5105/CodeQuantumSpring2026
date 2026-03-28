@@ -1,8 +1,17 @@
 import { useState, type CSSProperties } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ComponentSliders from '../components/ComponentSliders';
 import Navbar from '../components/Navbar';
+import Navbar from '../components/Navbar';
 import { mockQualities, getMockRemainingBudget, mockComponents } from '../store/mockComponentData';
+import {
+  type BudgetConfig,
+  type BudgetExceededDetail,
+  type DriverMeta,
+  type SimulationResponse,
+  simulationService,
+} from '../services/api';
 import '../styles/design-studio.css';
 
 // Audio Assets
@@ -136,6 +145,7 @@ const StudioPage = () => {
   return (
     <div className="studio-root">
       <Navbar remainingBudget={remainingBudget} onLogoClick={() => navigate('/')} />
+      <Navbar remainingBudget={remainingBudget} onLogoClick={() => navigate('/')} />
 
       <div className="studio-body">
         {/* ── CAR SHOWCASE ── */}
@@ -226,13 +236,66 @@ const StudioPage = () => {
             {/* Run */}
             <div className="run-block">
               <div className="panel-section-label">Simulate</div>
-              <button className="run-btn" onClick={handleRunSimulation}>
+
+              <div className="driver-select-block">
+                <label className="driver-select-label" htmlFor="selected-driver">
+                  Driver Focus
+                </label>
+                <select
+                  id="selected-driver"
+                  className="driver-select"
+                  value={selectedDriverNumber}
+                  onChange={(event) => {
+                    setSelectedDriverNumber(event.target.value);
+                    if (event.target.value) {
+                      setDriverSelectionError(null);
+                    }
+                  }}
+                >
+                  <option value="">Select a driver</option>
+                  {drivers.map((driver) => (
+                    <option key={driver.driver_number} value={driver.driver_number}>
+                      {driver.driver_name} · {driver.team_name} · #{driver.driver_number}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                className="run-btn"
+                onClick={handleRunSimulation}
+                disabled={isRunning || !selectedDriverNumber || drivers.length === 0}
+              >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M8 5v14l11-7z" />
                 </svg>
-                Run Simulation
+                {isRunning ? 'Running Simulation...' : 'Run Simulation'}
               </button>
               <div className="run-btn-sub">SIM_ENGINE · READY · v4.1.0</div>
+
+              {driverLoadError && (
+                <div style={{ marginTop: '0.8rem', color: '#fca5a5', fontSize: '0.85rem' }}>
+                  {driverLoadError}
+                </div>
+              )}
+
+              {driverSelectionError && (
+                <div style={{ marginTop: '0.8rem', color: '#fca5a5', fontSize: '0.85rem' }}>
+                  {driverSelectionError}
+                </div>
+              )}
+
+              {budgetError && (
+                <div style={{ marginTop: '0.8rem', color: '#fca5a5', fontSize: '0.85rem' }}>
+                  Budget exceeded by ${Math.round(budgetError.over_budget_by).toLocaleString()}
+                </div>
+              )}
+
+              {errorMessage && (
+                <div style={{ marginTop: '0.8rem', color: '#fca5a5', fontSize: '0.85rem' }}>
+                  {errorMessage}
+                </div>
+              )}
             </div>
           </div>
         </div>
