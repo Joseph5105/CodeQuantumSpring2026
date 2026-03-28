@@ -1,16 +1,12 @@
-import { useState, type CSSProperties } from 'react';
-import { useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ComponentSliders from '../components/ComponentSliders';
 import Navbar from '../components/Navbar';
-import Navbar from '../components/Navbar';
 import { mockQualities, getMockRemainingBudget, mockComponents } from '../store/mockComponentData';
 import {
-  type BudgetConfig,
-  type BudgetExceededDetail,
-  type DriverMeta,
-  type SimulationResponse,
   simulationService,
+  type DriverMeta,
+  type BudgetExceededDetail,
 } from '../services/api';
 import '../styles/design-studio.css';
 
@@ -86,7 +82,27 @@ const StudioPage = () => {
   const [qualities, setQualities] = useState(mockQualities);
   const [hoverEffect, setHoverEffect] = useState<HoverEffect>('none');
   const [isSimulating, setIsSimulating] = useState(false);
+
+  // API Driven States
+  const [drivers, setDrivers] = useState<DriverMeta[]>([]);
+  const [selectedDriverNumber, setSelectedDriverNumber] = useState<string>('');
+  const [isRunning, setIsRunning] = useState(false);
+  const [driverLoadError, setDriverLoadError] = useState<string | null>(null);
+  const [driverSelectionError, setDriverSelectionError] = useState<string | null>(null);
+  const [budgetError, setBudgetError] = useState<BudgetExceededDetail | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const remainingBudget = getMockRemainingBudget(qualities);
+
+  // Load drivers on mount
+  useEffect(() => {
+    simulationService.getDrivers()
+      .then(setDrivers)
+      .catch(e => {
+        console.error("Driver fetch failed:", e);
+        setDriverLoadError("Regional Driver Database Offline · Using Local Grid");
+      });
+  }, []);
 
   const handleSliderChange = (key: string, value: string) => {
     const val = parseInt(value);
@@ -107,20 +123,57 @@ const StudioPage = () => {
     }
   };
 
-  const handleRunSimulation = () => {
-    if (isSimulating) return;
+  const handleRunSimulation = async () => {
+    if (isRunning || isSimulating) return;
 
-    setIsSimulating(true);
+    if (!selectedDriverNumber) {
+      setDriverSelectionError("Select a driver to focus evaluation");
+      return;
+    }
 
-    // Play sound
-    const audio = new Audio(LoudEngine);
-    audio.volume = 0.5;
-    audio.play().catch(e => console.error("Audio play failed:", e));
+    setDriverSelectionError(null);
+    setBudgetError(null);
+    setErrorMessage(null);
+    setIsRunning(true);
 
-    // Delay navigation to results
-    setTimeout(() => {
-      navigate('/results', { state: { qualities } });
-    }, 2200);
+    try {
+      const response = await simulationService.simulate({
+        sliders: {
+          engine: qualities.engine,
+          aero: qualities.aerodynamics,
+          suspension: qualities.suspension,
+          transmission: qualities.transmission,
+          pitcrew: qualities.pitCrew,
+        },
+        selected_driver_number: selectedDriverNumber,
+      });
+
+      // Visual Trigger
+      setIsSimulating(true);
+
+      // Play sound
+      const audio = new Audio(LoudEngine);
+      audio.volume = 0.5;
+      audio.play().catch(e => console.error("Audio play failed:", e));
+
+      // Delay navigation for cinematic effect
+      setTimeout(() => {
+        navigate('/race-simulation', {
+          state: {
+            simulationResult: response,
+            selectedDriverNumber
+          }
+        });
+      }, 2200);
+
+    } catch (err: any) {
+      setIsRunning(false);
+      if (err.response?.status === 422 && err.response?.data?.detail?.error === 'BUDGET_EXCEEDED') {
+        setBudgetError(err.response.data.detail);
+      } else {
+        setErrorMessage(err.response?.data?.detail || "Simulation engine failure. Check telemetry connection.");
+      }
+    }
   };
 
   // Suspension bounce — higher quality = stiffer, smaller bounce
@@ -144,7 +197,6 @@ const StudioPage = () => {
 
   return (
     <div className="studio-root">
-      <Navbar remainingBudget={remainingBudget} onLogoClick={() => navigate('/')} />
       <Navbar remainingBudget={remainingBudget} onLogoClick={() => navigate('/')} />
 
       <div className="studio-body">
