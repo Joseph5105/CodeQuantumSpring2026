@@ -231,7 +231,7 @@
     }
 
     to {
-        transform: rotate(360deg);
+        transform: rotate(-360deg);
     }
 }
 
@@ -611,5 +611,42 @@
 
     100% {
         transform: translateX(100%);
+    }
+}
+
+/* ── SIMULATION EFFECTS ── */
+.car-wrapper.simulating {
+    animation: driftOff 2.2s ease-in forwards !important;
+}
+
+@keyframes driftOff {
+    0% {
+        transform: translateX(0) rotate(0deg);
+    }
+
+    /* Subtle engine vibration/revving */
+    5%,
+    15% {
+        transform: translate(1px, -1px) rotate(0.1deg);
+    }
+
+    10%,
+    20% {
+        transform: translate(-1px, 1px) rotate(-0.1deg);
+    }
+
+    25% {
+        transform: translateX(0) rotate(0deg);
+    }
+
+    /* Smooth "winding up" (backing up slightly) */
+    45% {
+        transform: translateX(150px) rotate(-1deg);
+    }
+
+    /* High-velocity launch forward (left) */
+    100% {
+        transform: translateX(-500vw) rotate(0deg);
+        opacity: 0;
     }
 }

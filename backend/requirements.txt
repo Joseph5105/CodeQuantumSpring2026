@@ -4,4 +4,7 @@ sqlalchemy
 pydantic
 pandas
 numpy
+python-multipart
+python-dotenv
+httpx
 ruff

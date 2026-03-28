@@ -38,7 +38,7 @@ export const mockComponents: Record<string, {
     },
 };
 
-export const MOCK_INITIAL_BUDGET = 15000000;
+export const MOCK_INITIAL_BUDGET = 30000000;
 
 export const getMockRemainingBudget = (qualities: Record<string, number>): number => {
     return MOCK_INITIAL_BUDGET - Object.entries(qualities).reduce((acc, [key, value]) => {

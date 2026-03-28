@@ -1,9 +1,12 @@
 import { useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ComponentSliders from '../components/ComponentSliders';
-import NavBar from '../components/NavBar';
+import Navbar from '../components/Navbar';
 import { mockQualities, getMockRemainingBudget, mockComponents } from '../store/mockComponentData';
 import '../styles/design-studio.css';
+
+// Audio Assets
+import LoudEngine from '../assets/LoudEngine.mp3';
 
 // ── Inline CarSVG with animatable refs ──
 const CarSVG = ({
@@ -73,6 +76,7 @@ const StudioPage = () => {
   const navigate = useNavigate();
   const [qualities, setQualities] = useState(mockQualities);
   const [hoverEffect, setHoverEffect] = useState<HoverEffect>('none');
+  const [isSimulating, setIsSimulating] = useState(false);
   const remainingBudget = getMockRemainingBudget(qualities);
 
   const handleSliderChange = (key: string, value: string) => {
@@ -95,11 +99,23 @@ const StudioPage = () => {
   };
 
   const handleRunSimulation = () => {
-    console.log('Simulation started:', qualities);
+    if (isSimulating) return;
+
+    setIsSimulating(true);
+
+    // Play sound
+    const audio = new Audio(LoudEngine);
+    audio.volume = 0.5;
+    audio.play().catch(e => console.error("Audio play failed:", e));
+
+    // Delay navigation to results
+    setTimeout(() => {
+      navigate('/results', { state: { qualities } });
+    }, 2200);
   };
 
-  // Suspension bounce — height and speed scale with quality
-  const bounceHeight = Math.max(2, Math.round(qualities.suspension * 0.12));
+  // Suspension bounce — higher quality = stiffer, smaller bounce
+  const bounceHeight = Math.max(2, 12 - Math.round(qualities.suspension * 0.1));
   const bounceDuration = Math.max(0.25, 0.8 - qualities.suspension * 0.005);
 
   // Transmission spin speed — faster = higher quality
@@ -119,7 +135,7 @@ const StudioPage = () => {
 
   return (
     <div className="studio-root">
-      <NavBar remainingBudget={remainingBudget} onLogoClick={() => navigate('/')} />
+      <Navbar remainingBudget={remainingBudget} onLogoClick={() => navigate('/')} />
 
       <div className="studio-body">
         {/* ── CAR SHOWCASE ── */}
@@ -143,9 +159,9 @@ const StudioPage = () => {
             ))}
           </div>
 
-          {/* Car wrapper — handles bounce */}
+          {/* Car wrapper — handles bounce and simulation drift */}
           <div
-            className={`car-wrapper ${hoverEffect === 'suspension' ? 'bouncing' : ''}`}
+            className={`car-wrapper ${hoverEffect === 'suspension' ? 'bouncing' : ''} ${isSimulating ? 'simulating' : ''}`}
             style={
               {
                 '--bounce-height': `-${bounceHeight}px`,
@@ -180,11 +196,11 @@ const StudioPage = () => {
           {/* Telemetry strip */}
           <div className="telem-strip">
             {[
-              { label: 'Power Unit', value: `${qualities.engine}%` },
+              { label: 'Engine Power', value: `${qualities.engine}%` },
               { label: 'Aero', value: `${qualities.aerodynamics}%` },
               { label: 'Suspension', value: `${qualities.suspension}%` },
               { label: 'Transmission', value: `${qualities.transmission}%` },
-              { label: 'Pit Crew', value: `${qualities.pitCrew}%` },
+              { label: 'Pit Crew Efficiency', value: `${qualities.pitCrew}%` },
             ].map(({ label, value }) => (
               <div key={label} className="telem-cell">
                 <span className="telem-label">{label}</span>
