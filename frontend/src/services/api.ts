@@ -55,6 +55,18 @@ export interface DriverSimulationResult {
   modifier_scope?: string;
 }
 
+export interface PitIncidentEvent {
+  lap: number;
+  added_seconds: number;
+  roll: number;
+}
+
+export interface LapPoint {
+  lap: number;
+  lap_time: number;
+  cumulative_time: number;
+}
+
 export interface SimulationResponse {
   simulation_id: number;
   model_version: string;
@@ -69,6 +81,22 @@ export interface SimulationResponse {
   total_package_cost?: number;
   remaining_budget?: number;
   package_costs?: Record<string, number> | null;
+  selected_driver_playback?: {
+    risk_probability: number;
+    per_lap_chance: number;
+    events: PitIncidentEvent[];
+    lap_timeline: LapPoint[];
+    report_metrics: RaceReportMetrics;
+  } | null;
+}
+
+export interface RaceReportMetrics {
+  top_speed_kph: number;
+  zero_to_sixty_s: number;
+  total_pit_time_s: number;
+  total_race_time_s: number;
+  avg_lap_time_s: number;
+  fake_placement_ranking: string;
 }
 
 export interface SimulationHistoryItem {

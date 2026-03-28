@@ -14,6 +14,9 @@ import '../styles/design-studio.css';
 // Audio Assets
 import LoudEngine from '../assets/LoudEngine.mp3';
 
+const LAST_SIMULATION_STORAGE_KEY = 'cq:lastSimulationResult';
+const LAST_SELECTED_DRIVER_STORAGE_KEY = 'cq:lastSelectedDriverNumber';
+
 // ── Inline CarSVG with animatable refs ──
 const CarSVG = ({
   width = '100%',
@@ -187,6 +190,9 @@ const StudioPage = () => {
         },
         selected_driver_number: selectedDriverNumber,
       });
+
+      sessionStorage.setItem(LAST_SIMULATION_STORAGE_KEY, JSON.stringify(response));
+      sessionStorage.setItem(LAST_SELECTED_DRIVER_STORAGE_KEY, selectedDriverNumber);
 
       // Visual Trigger
       setIsSimulating(true);

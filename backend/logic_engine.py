@@ -5,7 +5,15 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from schemas import DriverSimulationResult, SimulationRequest, SliderSet
+from schemas import (
+    DriverSimulationResult,
+    LapPoint,
+    PitIncidentEvent,
+    RaceReportMetrics,
+    SelectedDriverPlayback,
+    SimulationRequest,
+    SliderSet,
+)
 
 MODEL_VERSION = "v0.4-driver-focused-tradeoffs-budget"
 MODIFIER_RANGES = {
@@ -528,6 +536,126 @@ class SimulationEngine:
             "rank_impact_from_risk": float(rank_estimate - no_risk_rank_estimate),
             "confidence": confidence,
         }
+
+    @staticmethod
+    def _seeded_unit(seed_input: str) -> float:
+        hash_val = 2166136261
+        for char in seed_input:
+            hash_val ^= ord(char)
+            hash_val += (
+                (hash_val << 1)
+                + (hash_val << 4)
+                + (hash_val << 7)
+                + (hash_val << 8)
+                + (hash_val << 24)
+            )
+        return float((hash_val & 0xFFFFFFFF) / 4294967295.0)
+
+    @staticmethod
+    def _get_lap_count(total_finish_time_s: float) -> int:
+        return int(np.clip(round(total_finish_time_s / 90.0), 45, 72))
+
+    @staticmethod
+    def _clamp(value: float, low: float, high: float) -> float:
+        return float(np.clip(value, low, high))
+
+    def build_selected_driver_playback(
+        self,
+        selected_driver: DriverSimulationResult,
+        simulation_id: int,
+    ) -> SelectedDriverPlayback:
+        risk_probability = max(0.0, float(selected_driver.expected_risk_event_probability))
+        # Keep chance dynamic and avoid hard-locking at exactly 3.00%.
+        per_lap_chance = self._clamp(0.003 + (risk_probability * 0.085), 0.002, 0.12)
+
+        estimated_lap_count = self._get_lap_count(
+            float(selected_driver.expected_predicted_finish_time_s)
+        )
+        base_seed = (
+            f"{simulation_id}:{selected_driver.driver_number}:"
+            f"{selected_driver.expected_predicted_finish_time_s:.3f}"
+        )
+        baseline_risk_penalty = max(1.8, float(selected_driver.expected_risk_time_penalty_s))
+
+        events: list[PitIncidentEvent] = []
+        delay_by_lap: dict[int, float] = {}
+        for lap in range(4, estimated_lap_count):
+            roll = self._seeded_unit(f"{base_seed}:lap-trigger:{lap}")
+            if roll >= per_lap_chance:
+                continue
+
+            penalty_roll = self._seeded_unit(f"{base_seed}:lap-penalty:{lap}")
+            added_seconds = round(baseline_risk_penalty * (0.35 + (penalty_roll * 1.05)), 3)
+            events.append(PitIncidentEvent(lap=lap, added_seconds=added_seconds, roll=roll))
+            delay_by_lap[lap] = delay_by_lap.get(lap, 0.0) + added_seconds
+
+        modeled_base_finish = max(
+            1.0,
+            float(selected_driver.expected_predicted_finish_time_s)
+            - max(0.0, float(selected_driver.expected_risk_time_penalty_s)),
+        )
+        total_pit_delay = sum(event.added_seconds for event in events)
+        total_finish_time = modeled_base_finish + total_pit_delay
+        lap_count = self._get_lap_count(total_finish_time)
+        base_lap_time = total_finish_time / max(lap_count, 1)
+        confidence_penalty = (1.0 - float(selected_driver.confidence)) * 0.65
+
+        lap_timeline: list[LapPoint] = []
+        cumulative = 0.0
+        for lap_idx in range(lap_count):
+            wave = np.sin((lap_idx / max(lap_count, 1)) * np.pi * 2.0) * 0.35
+            fatigue = 0.14 if lap_idx > (lap_count * 0.82) else 0.0
+            lap_time = base_lap_time + wave + confidence_penalty + fatigue
+            lap_time += delay_by_lap.get(lap_idx + 1, 0.0)
+            lap_time = max(50.0, lap_time)
+            cumulative += lap_time
+            lap_timeline.append(
+                LapPoint(
+                    lap=lap_idx + 1,
+                    lap_time=float(round(lap_time, 3)),
+                    cumulative_time=float(round(cumulative, 3)),
+                )
+            )
+
+        pace_gain = self._clamp(-float(selected_driver.expected_delta_s), -8.0, 8.0)
+        top_speed = self._clamp(
+            327.0
+            + (pace_gain * 1.8)
+            + (float(selected_driver.confidence) * 14.0)
+            - (risk_probability * 20.0),
+            285.0,
+            365.0,
+        )
+        zero_to_sixty = self._clamp(
+            2.45
+            - (pace_gain * 0.03)
+            - (float(selected_driver.confidence) * 0.22)
+            + (risk_probability * 0.6),
+            1.8,
+            3.4,
+        )
+        fake_placement_ranking = (
+            "DQ"
+            if len(events) > 3
+            else f"P{max(1, int(round(float(selected_driver.expected_rank_estimate))))}"
+        )
+
+        report_metrics = RaceReportMetrics(
+            top_speed_kph=float(round(top_speed, 1)),
+            zero_to_sixty_s=float(round(zero_to_sixty, 3)),
+            total_pit_time_s=float(round(total_pit_delay, 3)),
+            total_race_time_s=float(round(cumulative, 3)),
+            avg_lap_time_s=float(round(cumulative / max(lap_count, 1), 3)),
+            fake_placement_ranking=fake_placement_ranking,
+        )
+
+        return SelectedDriverPlayback(
+            risk_probability=risk_probability,
+            per_lap_chance=float(round(per_lap_chance, 6)),
+            events=events,
+            lap_timeline=lap_timeline,
+            report_metrics=report_metrics,
+        )
 
     def simulate(self, payload: SimulationRequest) -> SimulationComputation:
         next_track_probs = self.data.get_next_track_probabilities()

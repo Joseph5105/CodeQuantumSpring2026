@@ -44,6 +44,35 @@ class DriverSimulationResult(BaseModel):
     modifier_scope: str = "global"
 
 
+class PitIncidentEvent(BaseModel):
+    lap: int
+    added_seconds: float
+    roll: float
+
+
+class LapPoint(BaseModel):
+    lap: int
+    lap_time: float
+    cumulative_time: float
+
+
+class RaceReportMetrics(BaseModel):
+    top_speed_kph: float
+    zero_to_sixty_s: float
+    total_pit_time_s: float
+    total_race_time_s: float
+    avg_lap_time_s: float
+    fake_placement_ranking: str
+
+
+class SelectedDriverPlayback(BaseModel):
+    risk_probability: float
+    per_lap_chance: float
+    events: list[PitIncidentEvent]
+    lap_timeline: list[LapPoint]
+    report_metrics: RaceReportMetrics
+
+
 class SimulationResponse(BaseModel):
     simulation_id: int
     model_version: str
@@ -58,6 +87,7 @@ class SimulationResponse(BaseModel):
     total_package_cost: float = 0.0
     remaining_budget: float = 30_000_000.0
     package_costs: dict[str, float] | None = None
+    selected_driver_playback: SelectedDriverPlayback | None = None
 
 
 class DriverMeta(BaseModel):

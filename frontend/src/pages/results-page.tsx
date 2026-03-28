@@ -1,11 +1,12 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Trophy, RotateCcw, AlertTriangle, Users, Play } from 'lucide-react';
 import { useMemo } from 'react';
-import type { SimulationResponse } from '../services/api';
+import type { RaceReportMetrics, SimulationResponse } from '../services/api';
 
 type ResultsLocationState = {
   simulationResult?: SimulationResponse;
   selectedDriverNumber?: string;
+    reportMetrics?: RaceReportMetrics | null;
 };
 
 const formatTime = (seconds: number): string => {
@@ -16,7 +17,7 @@ const formatTime = (seconds: number): string => {
 };
 
 const getLapCount = (totalFinishTime: number): number => {
-  return Math.min(72, Math.max(45, Math.round(totalFinishTime / 90)));
+    return Math.min(72, Math.max(45, Math.round(totalFinishTime / 90)));
 };
 
 export default function ResultsPage() {
@@ -26,6 +27,7 @@ export default function ResultsPage() {
 
   const simulationResult = state?.simulationResult;
   const selectedDriverNumber = state?.selectedDriverNumber || simulationResult?.selected_driver_number;
+    const passedReportMetrics = state?.reportMetrics ?? null;
 
   const selectedDriver = useMemo(() => {
     if (!simulationResult || !selectedDriverNumber) return null;
@@ -42,9 +44,20 @@ export default function ResultsPage() {
   }
 
   const lapCount = getLapCount(selectedDriver.expected_predicted_finish_time_s);
-  const avgLapTime = selectedDriver.expected_predicted_finish_time_s / lapCount;
-  
-  const rank = selectedDriver.expected_rank_estimate;
+  const backendReportMetrics = simulationResult.selected_driver_playback?.report_metrics ?? null;
+  const reportMetrics = passedReportMetrics ?? backendReportMetrics;
+
+  const avgLapTime = reportMetrics?.avg_lap_time_s ?? (selectedDriver.expected_predicted_finish_time_s / lapCount);
+  const totalRaceTime = reportMetrics?.total_race_time_s ?? selectedDriver.expected_predicted_finish_time_s;
+  const totalPitTime = reportMetrics?.total_pit_time_s ?? selectedDriver.expected_risk_time_penalty_s;
+  const topSpeed = reportMetrics?.top_speed_kph ?? null;
+  const zeroToSixty = reportMetrics?.zero_to_sixty_s ?? null;
+  const fakePlacementRanking = reportMetrics?.fake_placement_ranking ?? `P${selectedDriver.expected_rank_estimate.toFixed(1)}`;
+
+  const parsedRank = Number(fakePlacementRanking.replace(/^P/i, ''));
+  const effectiveRank = Number.isFinite(parsedRank) ? parsedRank : selectedDriver.expected_rank_estimate;
+
+  const rank = effectiveRank;
   const isPodium = rank <= 3.5;
   const isTop10 = rank <= 10.5;
   
@@ -88,8 +101,35 @@ export default function ResultsPage() {
                             {formatTime(avgLapTime)}
                         </p>
                         <p className="text-slate-500 mt-2 text-xs font-mono">
-                            Total Time: {formatTime(selectedDriver.expected_predicted_finish_time_s)}
+                            Total Time: {formatTime(totalRaceTime)}
                         </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+                    <div className="bg-white/5 border border-white/10 p-4">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500">Top Speed</p>
+                        <p className="text-2xl font-mono font-black text-red-500">{topSpeed !== null ? `${topSpeed.toFixed(1)} km/h` : '--'}</p>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 p-4">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500">0-60 Acceleration</p>
+                        <p className="text-2xl font-mono font-black">{zeroToSixty !== null ? `${zeroToSixty.toFixed(3)}s` : '--'}</p>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 p-4">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500">Total Pit Time</p>
+                        <p className="text-2xl font-mono font-black">{totalPitTime.toFixed(3)}s</p>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 p-4">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500">Total Race Time</p>
+                        <p className="text-2xl font-mono font-black">{formatTime(totalRaceTime)}</p>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 p-4">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500">Average Lap Time</p>
+                        <p className="text-2xl font-mono font-black">{formatTime(avgLapTime)}</p>
+                    </div>
+                    <div className="bg-white/5 border border-white/10 p-4">
+                        <p className="text-[10px] uppercase tracking-widest text-slate-500">Fake Placement Ranking</p>
+                        <p className="text-2xl font-black italic">{fakePlacementRanking}</p>
                     </div>
                 </div>
 
@@ -127,7 +167,7 @@ export default function ResultsPage() {
                             <div className="mt-6 pt-4 border-t border-white/10 grid grid-cols-2 gap-4">
                                 <div>
                                     <p className="text-[10px] text-slate-500 uppercase tracking-widest">Est. Rank</p>
-                                    <p className="text-xl font-mono font-bold">P{selectedDriver.expected_rank_estimate.toFixed(1)}</p>
+                                    <p className="text-xl font-mono font-bold">{fakePlacementRanking}</p>
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-slate-500 uppercase tracking-widest">Perf Delta</p>

@@ -72,6 +72,22 @@ def simulate_run(
 
     row = database.save_simulation_run(db, payload, computation)
 
+    selected_driver_playback = None
+    if computation.selected_driver_number is not None:
+        selected_driver = next(
+            (
+                driver
+                for driver in computation.top_results
+                if driver.driver_number == computation.selected_driver_number
+            ),
+            None,
+        )
+        if selected_driver is not None:
+            selected_driver_playback = ENGINE.build_selected_driver_playback(
+                selected_driver=selected_driver,
+                simulation_id=row.id,
+            )
+
     return SimulationResponse(
         simulation_id=row.id,
         model_version=computation.model_version,
@@ -88,6 +104,7 @@ def simulate_run(
         total_package_cost=computation.total_package_cost,
         remaining_budget=computation.remaining_budget,
         package_costs=computation.package_costs,
+        selected_driver_playback=selected_driver_playback,
     )
 
 
